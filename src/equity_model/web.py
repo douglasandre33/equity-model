@@ -5,6 +5,7 @@ from importlib import resources
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -12,6 +13,14 @@ from fastapi.templating import Jinja2Templates
 from .model import DataFetchError, estimate_intrinsic_value
 
 app = FastAPI(title="Equity Model")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 static_dir = resources.files("equity_model").joinpath("static")
 templates_dir = resources.files("equity_model").joinpath("templates")

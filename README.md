@@ -43,4 +43,7 @@ GitHub Pages only hosts static files, so it cannot execute the Python model dire
 1. Host the API separately (Render, Fly.io, Railway, Google Cloud Run, etc.) and point the website to that API.
 2. Convert the model to a purely client-side or serverless approach (e.g., WebAssembly or a serverless function).
 
+If you deploy the API separately, enter the public API base URL in the UI (for example,
+`https://your-service.example.com`) so the GitHub Pages site can call `/api/estimate`.
+
 > Note: This is a research scaffold, not investment advice.
