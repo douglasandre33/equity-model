@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Equity Model</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <p class="eyebrow">Equity Model</p>
+        <h1>Intrinsic Value Explorer</h1>
+        <p class="subhead">
+          Enter a ticker to fetch cash flow data and estimate intrinsic value using a
+          fundamentals-driven DCF.
+        </p>
+      </header>
+
+      <section class="card">
+        <form id="estimate-form">
+          <label for="ticker">Ticker symbol</label>
+          <div class="input-row">
+            <input id="ticker" name="ticker" placeholder="DUOL" required />
+            <button type="submit">Load model</button>
+          </div>
+
+          <div class="grid">
+            <div>
+              <label for="years">Forecast years</label>
+              <input id="years" name="years" type="number" min="1" max="15" value="5" />
+            </div>
+            <div>
+              <label for="discount">Discount rate</label>
+              <input id="discount" name="discount" type="number" step="0.01" value="0.09" />
+            </div>
+            <div>
+              <label for="terminal">Terminal growth</label>
+              <input id="terminal" name="terminal" type="number" step="0.01" value="0.02" />
+            </div>
+            <div>
+              <label for="api-base">API base URL (optional)</label>
+              <input
+                id="api-base"
+                name="api-base"
+                placeholder="https://your-api.example.com"
+              />
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="results" hidden>
+        <div class="results-header">
+          <h2 id="results-title">Results</h2>
+          <span class="badge" id="currency">USD</span>
+        </div>
+        <div class="metrics">
+          <div>
+            <p class="label">Intrinsic value</p>
+            <p class="value" id="intrinsic-value">-</p>
+          </div>
+          <div>
+            <p class="label">Current price</p>
+            <p class="value" id="current-price">-</p>
+          </div>
+          <div>
+            <p class="label">Shares outstanding</p>
+            <p class="value" id="shares-outstanding">-</p>
+          </div>
+        </div>
+        <div class="lists">
+          <div>
+            <h3>Historical FCF</h3>
+            <ul id="history-list"></ul>
+          </div>
+          <div>
+            <h3>Forecast FCF</h3>
+            <ul id="forecast-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card error" id="error" hidden>
+        <h2>Unable to load model</h2>
+        <p id="error-message"></p>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('estimate-form');
+      const results = document.getElementById('results');
+      const errorCard = document.getElementById('error');
+      const errorMessage = document.getElementById('error-message');
+
+      const formatNumber = (value, decimals = 2) => {
+        if (value === null || value === undefined) {
+          return '-';
+        }
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        }).format(value);
+      };
+
+      const formatInteger = (value) =>
+        value === null || value === undefined
+          ? '-'
+          : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+
+      const renderList = (elementId, values) => {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+        values.forEach((value) => {
+          const li = document.createElement('li');
+          li.textContent = formatNumber(value, 0);
+          element.appendChild(li);
+        });
+      };
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        errorCard.hidden = true;
+        results.hidden = true;
+
+        const ticker = document.getElementById('ticker').value.trim();
+        const years = document.getElementById('years').value;
+        const discount = document.getElementById('discount').value;
+        const terminal = document.getElementById('terminal').value;
+        const apiBaseInput = document.getElementById('api-base').value.trim();
+        const apiBase = apiBaseInput ? apiBaseInput.replace(/\/$/, '') : '';
+
+        try {
+          const response = await fetch(
+            `${apiBase}/api/estimate?ticker=${encodeURIComponent(ticker)}&years=${years}&discount_rate=${discount}&terminal_growth=${terminal}`,
+          );
+
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || 'Request failed');
+          }
+
+          const data = await response.json();
+
+          document.getElementById('results-title').textContent = `Results for ${data.ticker}`;
+          document.getElementById('currency').textContent = data.currency;
+          document.getElementById('intrinsic-value').textContent = formatNumber(
+            data.intrinsic_value,
+          );
+          document.getElementById('current-price').textContent = formatNumber(data.share_price);
+          document.getElementById('shares-outstanding').textContent = formatInteger(
+            data.shares_outstanding,
+          );
+
+          renderList('history-list', data.fcf_history);
+          renderList('forecast-list', data.fcf_forecast);
+
+          results.hidden = false;
+        } catch (error) {
+          errorMessage.textContent = error.message;
+          errorCard.hidden = false;
+        }
+      });
+    </script>
+  </body>
+</html>
